@@ -487,6 +487,7 @@ penguins |> summarise(mean_flipper_length = mean(flipper_length_mm))
 
 penguins |> summarise(mean_flipper_length = mean(flipper_length_mm, na.rm=TRUE))
 ```
+
 Adding `na.rm=TRUE` to the `mean` function will fix this.
 
 Another way that missing values can turn up is where they are **implicitly** missing. e.g. in the `clean` roll data, there are no `NA` entries at all, however there is missing data. e.g. if we tried to find the average number students of each level across schools, we might try[^grouping]:
@@ -554,6 +555,7 @@ clean |>
   summarise(meanstudents = mean(Students))
 
 ```
+thistle3
 
 [^MASS]: A common issue is loading `MASS` after `dplyr` - the `MASS::select()` function then overrides `dplyr::select()` which results in very opaque error messages when you try and `select()` columns from a `data.frame`.
 

@@ -86,7 +86,7 @@ ggplot() +
 
 #3. Trying 2. but so other is at the end
 
-ethnic_levels1 <- c("Asian", "European", "Māori", "MELAA", "Pacific", "Other")
+ethnic_levels <- c("Asian", "European", "Māori", "MELAA", "Pacific", "Other")
 
 ethnicity_by_year |> 
   filter(EthnicGroup != "International fee paying") |> 
@@ -111,9 +111,41 @@ schools
 
 ### Try yourself
 
-1. How many schools are there in the Palmerston North Territorial Authority?
-2. Of the schools in Palmerston North, how many are co-ed, single-sex girls or single-sex boys? *You can use `count(SchoolGender)` for this.*
-3. Produce a chart that shows the breakdown in secondary schools by school gender (co-ed, single-sex girls, single-sex boys) for each of the three Takiwa (education regions). You may wish to remove the two schools that have senior co-ed and junior boys only.
+```{r}
+#1. How many schools are there in the Palmerston North Territorial Authority? There are 43 schools within the Palmerston North Territorial Authority
+unique(schools$TerritorialAuthority)
+schools |> filter(TerritorialAuthority == "Palmerston North") |>
+  count()
+
+#2. Of the schools in Palmerston North, how many are co-ed, single-sex girls or single-sex boys? *You can use `count(SchoolGender)` for this.*
+
+schools |>  filter(TerritorialAuthority == "Palmerston North") |>
+group_by(SchoolGender) |>
+summarise(num= n())
+
+#or
+
+schools |> filter(TerritorialAuthority == "Palmerston North") |>
+  count(SchoolGender)
+
+
+#3. Produce a chart that shows the breakdown in secondary schools by school gender (co-ed, single-sex girls, single-sex boys) for each of the three Takiwa (education regions). You may wish to remove the two schools that have senior co-ed and junior boys only.
+
+schools |>  filter(Sector == "Secondary") |>
+  filter(SchoolGender != "Sen.Co-Ed, Jun.Boys") |>
+  group_by(SchoolGender, Takiwa) |>
+  summarise(count = n()) |>
+  
+  ggplot(aes(x = SchoolGender, y = count, fill = SchoolGender)) +
+    geom_col() +
+     facet_wrap(vars(Takiwa), ncol= 1)+
+      labs(title = "Secondary Schools by School Gender " ) +
+         scale_fill_brewer(palette = "Set4") +
+     theme_minimal() +
+     coord_flip()
+
+```
+
 
 ## Joining datasets with `left_join`
 
@@ -131,11 +163,32 @@ Notice that the `left_join` function automatically found which column to match o
 We can now use the `all_data` dataset to answer questions using the variables from both datasets:
 
 ### Try yourself
+```{r}
 
-1. How many students are there in each Regional Council?
-2. How many students of each ethnicity are there in each Takiwa?
-3. How many students are in schools with a religious affiliation?
-4. Produce a chart showing the total number of students of each year level within each Takiwa by using `facet_wrap()` to produce side by side plots by Takiwa.
+# 1. How many students are there in each Regional Council?
+all_data |> group_by(RegionalCouncil) |>
+summarise(sum(Students))
+
+# 2. How many students of each ethnicity are there in each Takiwa?
+all_data |> group_by(EthnicGroup, Takiwa) |>
+  summarise(Total = sum(Students))
+
+# 3. How many students are in schools with a religious affiliation?
+unique(all_data$AffiliationType)
+all_data |> group_by(School) |>
+  filter(AffiliationType == "Religious Affiliation" ) |>
+  summarise(Total = sum(Students))
+
+# 4. Produce a chart showing the total number of students of each year level within each Takiwa by using `facet_wrap()` to produce side by side plots by Takiwa.
+
+all_data |> group_by(Takiwa, Level)|>
+  summarise(Total = sum(Students)) |>
+  ggplot() +
+  aes(x = Level, y= Total) +
+  geom_col() +
+  facet_wrap(vars(Takiwa))
+
+```
 
 ## Facetting with two variables
 
@@ -155,8 +208,42 @@ While this works, we end up with a lot of space used for all the headings. An al
 
 ### Try yourself
 
-1. Alter the above chart to show how the number of students in each year level differs by ethnicity in each Takiwa using `facet_grid()`.
-2. Play around with which variable is in rows and which is in columns and the `scales` parameter to `facet_grid()` to produce something that shows all subgroups reasonably well.
+```{r}
+
+# 1. Alter the above chart to show how the number of students in each year level differs by ethnicity in each Takiwa using `facet_grid()`.
+
+all_data |>
+  filter(EthnicGroup != "International fee paying") |>
+  group_by(Takiwa, EthnicGroup, Level) |>
+  summarise(Total = sum(Students)) |>
+  ggplot() +
+  geom_col(mapping=aes(x=Level, y=Total)) +
+  facet_grid(rows = vars(Takiwa),
+             cols = vars(EthnicGroup))
+
+# 2. Play around with which variable is in rows and which is in columns and the `scales` parameter to `facet_grid()` to produce something that shows all subgroups reasonably well.
+
+all_data |>
+  filter(EthnicGroup != "International fee paying") |>
+  group_by(Takiwa, EthnicGroup, Level) |>
+  summarise(Total = sum(Students)) |>
+  ggplot() +
+  geom_col(mapping=aes(x=Level, y=Total)) +
+  facet_grid(rows = vars(Takiwa),
+             cols = vars(EthnicGroup),
+             scales = "free_y")
+
+all_data |>
+  filter(EthnicGroup != "International fee paying") |>
+  group_by(Takiwa, AffiliationType, Level) |>
+  summarise(Total = sum(Students)) |>
+  ggplot() +
+  geom_col(mapping=aes(x=Level, y=Total)) +
+  facet_grid(rows = vars(Takiwa),
+             cols = vars(AffiliationType),
+             scales = "free_x")
+
+```
 
 ## Using `pivot_wider` to turn tidy data into wide data
 
@@ -185,12 +272,20 @@ ethnicity_by_takiwa |>
 Notice we have the exact same information, it's just in a more human-readable form. It's not in a form that's easier to plot though! `ggplot` would struggle with these data, as we don't have a single "Count" column for the y-axis to use.
 
 ### Try yourself
+```{r}
 
 1. Create a table with total number of students in each year level in each Takiwa (Hint: `group_by` Takiwa and year level then `summarise`. Once done, `pivot_wider` to a table).
+
+
 2. Create a table with the number of each ethnic group in each year level.
+
+
 3. Try adding a "Total" column to the ethnic group by takiwa table. You could do this before the `pivot_wider` by using a `mutate` with `sum(Students)`.
+
+
 4. Try creating a table with the percentage of students of each ethnic group within each Takiwa. You can add a new column with `mutate()` and get the percentage by using `Students/sum(Students)` within each takiwa.
 
+```
 ## Tidying data
 
 Sometimes[^allthetime] the data we're given isn't in the nice, tidy form we've seen so far. Often it's on a spreadsheet, and that spreadsheet will include a bunch of junk that might be useful if a person is looking at it (e.g. notes, totals, averages etc) but is useless for actually working with the data.

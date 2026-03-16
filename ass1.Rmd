@@ -19,28 +19,51 @@ athletes <- read_csv("https://www.massey.ac.nz/~jcmarsha/161324/assessment/data/
 
 ## Exercise 1: Analysis of Incomplete Temperature
 
-### 1.1. Precise year and month
 
+### 1.1. Precise year and month
+The years in the dataset are numbered beginning at 1. If the first record in the dataset corresponds to January 1863, work out the precise date (year and month) at which:
+
+  a,   The last observation was made at location A; and
+  
+  The first observation made at Location B was January 1925.
+  
+  b,   The first observation was made at location B.
+ The first observation made at Location B was January 1925.
 ```{r}
 
+climate |>
+  filter(A != "NA") |>
+  tail(1)
 
+#a:We can see the last observation for locaton A took place on the 62nd year Month 3.
+# Year 62: 1863 + 62 = 1925. Month 3 : March. 
+# The last observation made at location A was March 1925.
+
+  climate |>
+  filter(B != "NA") |>
+  head(1)
+
+#B: :We can see the first observation for locaton B took place on the 62nd year Month 1.
+#Year 62 (1863 + 62 = 1925), Month 1 = January 1925. 
+# The first observation made at location B was January 1925. 
 
 ```
 
 ### 1.2. Table of mean temperature by month for locations C and D
+Produce a table of mean temperature by month in locations C and D. Consider how you might produce a table with informative month names.
 
 ```{r}
 
 ```
 
 ### 1.3. Monthly temperatures at location C in 1919
-
+Produce a bar plot of the monthly temperatures at location C in 1919. For full marks you will need to produce appropriate labels on the axes. 
 ```{r}
 
 ```
 
 ### 1.4. Monthly temperatures in 1924 for all locations
-
+Produce a bar plot of the monthly temperatures at all four locations in 1924. Replace any missing values with appropriate imputed values. Use different colours to distinguish real from imputed data.
 ```{r}
 
 ```

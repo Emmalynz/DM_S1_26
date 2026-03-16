@@ -274,16 +274,56 @@ Notice we have the exact same information, it's just in a more human-readable fo
 ### Try yourself
 ```{r}
 
-1. Create a table with total number of students in each year level in each Takiwa (Hint: `group_by` Takiwa and year level then `summarise`. Once done, `pivot_wider` to a table).
+# 1. Create a table with total number of students in each year level in each Takiwa (Hint: `group_by` Takiwa and year level then `summarise`. Once done, `pivot_wider` to a table).
 
+all_data |> group_by(Takiwa, Level) |>
+  summarise(Total = sum(Students))|>
+  pivot_wider(names_from = Takiwa, values_from = Total)
 
-2. Create a table with the number of each ethnic group in each year level.
+# 2. Create a table with the number of students in each ethnic group for each year level.
 
+ all_data|> group_by(Level, EthnicGroup) |>
+  summarise(Total = sum(Students)) |>
+  pivot_wider(names_from = EthnicGroup, values_from = Total)
 
-3. Try adding a "Total" column to the ethnic group by takiwa table. You could do this before the `pivot_wider` by using a `mutate` with `sum(Students)`.
+# 3. Try adding a "Total" column to the ethnic group by takiwa table. You could do this before the `pivot_wider` by using a `mutate` with `sum(Students)`.
 
+ethnicity_by_takiwa |> group_by(Takiwa, EthnicGroup) |>
+  pivot_wider(names_from = EthnicGroup, values_from = Students)|> 
+  mutate(Total = 'Te Tai Raro', 'Te Tai Runga', 'Te Tai Whenua')
 
-4. Try creating a table with the percentage of students of each ethnic group within each Takiwa. You can add a new column with `mutate()` and get the percentage by using `Students/sum(Students)` within each takiwa.
+#or - more reliable to changes
+
+all_data |> group_by(Takiwa, EthnicGroup) |>
+  summarise(Students = sum(Students)) |>
+  group_by(EthnicGroup) |>
+  mutate(Total = sum(Students)) |>
+  pivot_wider(names_from = Takiwa, values_from = Students) |>
+  relocate(Total, .after = last_col()) #move the total column to the last col
+
+#or doesnt use double group by - adds complexity, mutate is taking place within ethnic group.
+
+all_data |> group_by(EthnicGroup, Takiwa) |>
+  summarise(Students = sum(Students)) |>
+  mutate(Total = sum(Students)) |>
+  pivot_wider(names_from = Takiwa, values_from = Students) |>
+  relocate(Total, .after = last_col()) #move the total column to the last col
+
+# 4. Try creating a table with the percentage of students of each ethnic group within each Takiwa. You can add a new column with `mutate()` and get the percentage by using `Students/sum(Students)` within each takiwa.
+
+all_data |>
+  group_by(Takiwa, EthnicGroup) |>
+  summarise(Students = sum(Students))|>
+   mutate(Percentage = round(Students/sum(Students) *100, digits = 1)) |> 
+  pivot_wider(names_from = Takiwa, values_from = Percentage)
+ #notice graph has NAs not quite the result we wish, soemting has been bought over...
+
+all_data |>
+  group_by(Takiwa, EthnicGroup) |>
+  summarise(Students = sum(Students))|>
+   mutate(Percentage = round(Students/sum(Students) *100, digits = 1)) |> 
+  select(-Students) |> #remove so pivoting cn compress rows
+  pivot_wider(names_from = Takiwa, values_from = Percentage)
 
 ```
 ## Tidying data
@@ -361,8 +401,27 @@ Neat - the proportion seems to be accurate. Now we can do some charting.
 
 Your goal is to use the `imm_clean` dataset to produce the plot below:
 
-```{r}
+```{r, fig.width= 10, fig.height= 8}
 knitr::include_graphics("https://www.massey.ac.nz/~jcmarsha/161324/labs/immunisation.png")
+#this is a bar plot for regional vaccination counts by milestone in a facet wrap with a line and colour markings differentiating DHBs that reach 90% vaccination for that age group.
+
+
+imm_clean |>
+  filter(Milestone != "5 years") |>
+  mutate(Milestone = fct_relevel(Milestone, "6 months", "8 months")) |>
+  mutate(MetTarget = Proportion > 0.9)|>
+  mutate(DHB = fct_rev(DHB)) |>
+  ggplot() +
+  aes(x = Proportion, y = DHB,fill = MetTarget) + 
+  geom_vline(xintercept = 0.9, alpha = 0.7) +
+  geom_col(alpha = 0.8) +
+  facet_wrap(vars(Milestone)) +
+  scale_fill_manual(values = c("#C582B2", "#B7B7B2"), guide = "none")+
+  scale_x_continuous(labels = scales::percent_format(), limits = c(0, 1)) +
+  theme_minimal() + 
+  labs( y=NULL,
+        x = "Percent Immunised")
+
 ```
 
 Some hints:

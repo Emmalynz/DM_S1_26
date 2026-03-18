@@ -49,9 +49,21 @@ With this we see that the means are now sensible. We also know how many are miss
 
 ### Try yourself
 
-1. Use `skim` to take a look at the `yeast` data. You should notice it uses `999` for missing.
-2. Investigate the function `replace_with_na_all` to replace all the `999`'s with `NA`. Save the result in `yeast_na`.
-3. Check it's worked using `skim`.
+```{r}
+
+#1. Use `skim` to take a look at the `yeast` data. You should notice it uses `999` for missing.
+
+yeast |> skim()
+
+#2. Investigate the function `replace_with_na_all` to replace all the `999`'s with `NA`. Save the result in `yeast_na`.
+
+yeast_na <- yeast |> 
+  replace_with_na_all(~ .x == 999)
+  
+#3. Check it's worked using `skim`.
+
+yeast_na |> skim()
+```
 
 ## Visualising missing values
 

@@ -8,7 +8,9 @@ output: html_document
 ```{r setup, echo=TRUE, warning=FALSE, message=FALSE}
 # Add any other packages you need to load here.
 library(tidyverse)
-
+library(dplyr)
+library(skimr)
+library(naniar)
 
 # Read in the data
 climate <- read_csv("https://www.massey.ac.nz/~jcmarsha/161324/assessment/data/climate.csv")
@@ -25,34 +27,49 @@ The years in the dataset are numbered beginning at 1. If the first record in the
 
   a,   The last observation was made at location A; and
   
-  The first observation made at Location B was January 1925.
-  
   b,   The first observation was made at location B.
- The first observation made at Location B was January 1925.
+  
 ```{r}
+ date1 = make_datetime(year = 1863, month = 1, 1)
 
-climate |>
+ climate_1 <- climate |> 
+  mutate(date = date1 + months(row_number() - 1))
+
+climate_1 |>
   filter(A != "NA") |>
-  tail(1)
+  tail()
 
-#a:We can see the last observation for locaton A took place on the 62nd year Month 3.
-# Year 62: 1863 + 62 = 1925. Month 3 : March. 
-# The last observation made at location A was March 1925.
-
-  climate |>
+climate_1 |>
   filter(B != "NA") |>
-  head(1)
-
-#B: :We can see the first observation for locaton B took place on the 62nd year Month 1.
-#Year 62 (1863 + 62 = 1925), Month 1 = January 1925. 
-# The first observation made at location B was January 1925. 
+  head()
 
 ```
+
+A:  From the result, we can see the date of location As last observation took place on 1924-03-01. 
+To check, the last observation for A occurred in Year 62: 1863 + 61 (-1 for initial year) = 1924, Month 3 : March. 
+We can see the last observation for locaton A took place on March 1924..
+
+
+B: : From the result, we can see from the date column, location Bs first observation took place on 1924-01-01. To check, the first observation for B occured in Year 62: 1863 + 61 (-1 for 1863 the initial year) = 1924, Month 1 = January 1924.
+ We can see the first observation for locaton B took place on January 1924.
+
 
 ### 1.2. Table of mean temperature by month for locations C and D
 Produce a table of mean temperature by month in locations C and D. Consider how you might produce a table with informative month names.
 
+
 ```{r}
+
+climate_1 <- climate |> 
+     mutate(
+       Date = date1 + months(row_number() - 1),
+       Months = month.name[Month])|> 
+  group_by(Months) |>
+    summarise(
+       C_Meantemp = round(mean(C, na.rm = TRUE), digits = 2), 
+        D_MeanTemp = round( mean(D, na.rm = TRUE), digits = 2))
+
+print(climate_1)
 
 ```
 
@@ -60,11 +77,62 @@ Produce a table of mean temperature by month in locations C and D. Consider how 
 Produce a bar plot of the monthly temperatures at location C in 1919. For full marks you will need to produce appropriate labels on the axes. 
 ```{r}
 
+climate_2 <- climate |>
+    mutate(
+       Date = date1 + months(row_number() - 1),
+       Months = month.name[Month],
+       Year = year(Date))
+
+climate_2 |>
+  mutate(Months = fct_reorder(Months, desc(Month))) |>
+  filter(Year == '1919') |>
+  ggplot(mapping = aes(Months, C)) +
+           geom_col(fill = 'lightblue', colour = 'lightblue') + 
+  labs(title = "Monthly Temperatures at location C for 1919" ,
+       y = "Temperature (ºC)") +
+     theme_minimal() +
+     coord_flip()
+
 ```
 
 ### 1.4. Monthly temperatures in 1924 for all locations
+
 Produce a bar plot of the monthly temperatures at all four locations in 1924. Replace any missing values with appropriate imputed values. Use different colours to distinguish real from imputed data.
 ```{r}
+
+climate_3 <- climate_2 |> 
+    group_by(Months)|>
+      mutate(
+        A_MeanTemp_Imputed = round(impute_mean(A),digits = 2), 
+        B_MeanTemp = round(mean(B, na.rm = TRUE), digits = 2),
+        C_MeanTemp = round(mean(C, na.rm = TRUE), digits = 2), 
+        D_MeanTemp = round(mean(D, na.rm = TRUE), digits = 2)
+            )|>
+  filter(Year == '1924') |>
+  pivot_longer(
+    cols = c('A_MeanTemp_Imputed', 'B_MeanTemp', 'C_MeanTemp', 'D_MeanTemp'),
+          names_to = "Location",
+          values_to = "Temperature")
+  
+climate_3.2 <- climate_3 |> mutate(
+       Months = fct_reorder(Months, desc(Month)),
+        As_NA = is.na(A) & Location == 'A_MeanTemp_Imputed')
+
+Location_names <- as_labeller(c(
+  'A_MeanTemp_Imputed' = "Location A",
+  'B_MeanTemp' = "Location B",
+  'C_MeanTemp' = "Location C",
+  'D_MeanTemp' = "Location D"))
+
+climate_3.2 |>
+  ggplot(mapping = aes(Temperature, Months, fill = As_NA)) +
+  geom_col(colour = 'white') + 
+  labs(title = "Mean Monthly Temperatures for 1924" ,
+  y = "Mean Temperature (ºC) ") +
+  theme_minimal() +
+  facet_wrap(vars(Location), labeller = 'Location_names') +
+  scale_fill_manual(values = alpha(c("#83D7E6", "#ECBDFF")),
+                                     name = "Imputed Mean")
 
 ```
 
@@ -75,10 +143,41 @@ Produce a bar plot of the monthly temperatures at all four locations in 1924. Re
 
 ```{r}
 
+#looking at data
+skim(athletes)
+
+# Athletes data is complete, containing no missing values. Looking at variable descriptions we can see that Weight and Height are relevant to BMI. Using the formula provided in the BMI description, we could create a BMI check column, to manually calculate the BMIs, and run the BMIs provided against those calculated to identify any incorrect BMI values. 
+
+#Visualising height and weight individually against BMI, to see any extreme outliers. 
+
+athletes |>
+ggplot(mapping = aes(Ht, BMI)) +
+  geom_point()
+
+athletes |>
+ggplot(mapping = aes(Wt, BMI)) +
+  geom_point()
+
+# No obvious extreme values or outliers, 
+
+#Using mutate to create a new column, BMI_check the result of weight/height^2 (BMI formula)(rounded to 2dp) to manually calculate based off Ht and Wt columns,  
+athletes |> 
+  mutate(
+    BMI_check = round(Wt/(Ht/100)^2, digits =2)
+  ) |>
+  
+#check to see if BMI col is not equal to BMI_check col, ie, the BMI results are as expected by formula. 
+filter(BMI != BMI_check)
+    
+#we can see there is one miscalculated BMI value, An Individual (ID = 141) weight 170.0, weight 56, and a recorded BMI of 22.31, however we can see in the created BMI_check col, the calculated BMI value for this individuals weight and height would be, 19.22 (2,dp). 
 ```
 
+```
+Prediction 
 ### 2.2. Best three variables for separating sprinter and 400m groups
 
 ```{r}
+
+
 
 ```

@@ -30,18 +30,19 @@ The years in the dataset are numbered beginning at 1. If the first record in the
   b,   The first observation was made at location B.
   
 ```{r}
- date1 = make_datetime(year = 1863, month = 1, 1)
 
- climate_1 <- climate |> 
+date1 = make_datetime(year = 1863, month = 1, 1)
+
+climate_1 <- climate |> 
   mutate(date = date1 + months(row_number() - 1))
 
 climate_1 |>
   filter(A != "NA") |>
-  tail()
+  tail(1)
 
 climate_1 |>
   filter(B != "NA") |>
-  head()
+  head(1)
 
 ```
 
@@ -61,13 +62,13 @@ Produce a table of mean temperature by month in locations C and D. Consider how 
 ```{r}
 
 climate_1 <- climate |> 
-     mutate(
-       Date = date1 + months(row_number() - 1),
-       Months = month.name[Month])|> 
+  mutate(
+    Date = date1 + months(row_number() - 1),
+    Months = month.name[Month]) |> 
   group_by(Months) |>
-    summarise(
-       C_Meantemp = round(mean(C, na.rm = TRUE), digits = 2), 
-        D_MeanTemp = round( mean(D, na.rm = TRUE), digits = 2))
+  summarise(
+     C_Meantemp = round(mean(C, na.rm = TRUE), digits = 2), 
+     D_MeanTemp = round(mean(D, na.rm = TRUE), digits = 2))
 
 print(climate_1)
 
@@ -78,13 +79,13 @@ Produce a bar plot of the monthly temperatures at location C in 1919. For full m
 ```{r}
 
 climate_2 <- climate |>
-    mutate(
-       Date = date1 + months(row_number() - 1),
-       Months = month.name[Month],
-       Year = year(Date))
+  mutate(
+     Date   = date1 + months(row_number() - 1),
+     Months = factor(month.name[Month], levels = month.name),
+     Year   = year(Date)) #|>
+  #mutate(Months = fct_reorder(Months, desc(Month)))
 
 climate_2 |>
-  mutate(Months = fct_reorder(Months, desc(Month))) |>
   filter(Year == '1919') |>
   ggplot(mapping = aes(Months, C)) +
            geom_col(fill = 'lightblue', colour = 'lightblue') + 
@@ -101,28 +102,26 @@ Produce a bar plot of the monthly temperatures at all four locations in 1924. Re
 ```{r}
 
 climate_3 <- climate_2 |> 
-    group_by(Months)|>
-      mutate(
-        A_MeanTemp_Imputed = round(impute_mean(A),digits = 2), 
-        B_MeanTemp = round(mean(B, na.rm = TRUE), digits = 2),
-        C_MeanTemp = round(mean(C, na.rm = TRUE), digits = 2), 
-        D_MeanTemp = round(mean(D, na.rm = TRUE), digits = 2)
-            )|>
+    group_by(Months) |>
+    mutate(
+       `Location A` = round(impute_mean(A),digits = 2), 
+       `Location B` = round(mean(B, na.rm = TRUE), digits = 2),
+       `Location C` = round(mean(C, na.rm = TRUE), digits = 2), 
+       `Location D` = round(mean(D, na.rm = TRUE), digits = 2)) |>
   filter(Year == '1924') |>
   pivot_longer(
-    cols = c('A_MeanTemp_Imputed', 'B_MeanTemp', 'C_MeanTemp', 'D_MeanTemp'),
+    cols = c('Location A', 'Location B', 'Location C', 'Location D'),
           names_to = "Location",
           values_to = "Temperature")
   
 climate_3.2 <- climate_3 |> mutate(
-       Months = fct_reorder(Months, desc(Month)),
-        As_NA = is.na(A) & Location == 'A_MeanTemp_Imputed')
+  As_NA = is.na(A) & Location == 'Location A')
 
-Location_names <- as_labeller(c(
-  'A_MeanTemp_Imputed' = "Location A",
-  'B_MeanTemp' = "Location B",
-  'C_MeanTemp' = "Location C",
-  'D_MeanTemp' = "Location D"))
+# Location_names <- as_labeller(c(
+#   #'A_MeanTemp_Imputed' = "Location A",
+#   'B_MeanTemp' = "Location B",
+#   'C_MeanTemp' = "Location C",
+#   'D_MeanTemp' = "Location D"))
 
 climate_3.2 |>
   ggplot(mapping = aes(Temperature, Months, fill = As_NA)) +
@@ -130,9 +129,9 @@ climate_3.2 |>
   labs(title = "Mean Monthly Temperatures for 1924" ,
   y = "Mean Temperature (ºC) ") +
   theme_minimal() +
-  facet_wrap(vars(Location), labeller = 'Location_names') +
+  facet_wrap(vars(Location)) + #, labeller = 'Location_names') +
   scale_fill_manual(values = alpha(c("#83D7E6", "#ECBDFF")),
-                                     name = "Imputed Mean")
+                                     name = "Mean Imputed")
 
 ```
 
@@ -143,22 +142,25 @@ climate_3.2 |>
 
 ```{r}
 
-#looking at data
+#looking at data to see if there are any missing values. 
 skim(athletes)
 
-# Athletes data is complete, containing no missing values. Looking at variable descriptions we can see that Weight and Height are relevant to BMI. Using the formula provided in the BMI description, we could create a BMI check column, to manually calculate the BMIs, and run the BMIs provided against those calculated to identify any incorrect BMI values. 
+# The Athletes data is completes and contains no missing values. Looking at variable descriptions we can see that weight and height are relevant to BMI. Using the formula provided in the BMI description, we could create a BMI check column, to manually calculate the BMIs, and run the BMIs provided against those calculated to identify any incorrect BMI values. 
 
-#Visualising height and weight individually against BMI, to see any extreme outliers. 
+#Looking at the variables of athletes in a summary table, and the scatterplots for height and weight individually against BMI to see any noticeable extreme values or outliers. 
+summary(athletes)
 
-athletes |>
-ggplot(mapping = aes(Ht, BMI)) +
-  geom_point()
+#may not ven be useful?
+# athletes |>
+# ggplot(mapping = aes(Ht, BMI)) +
+#   geom_point()
+# 
+# athletes |>
+# ggplot(mapping = aes(Wt, BMI)) +
+#   geom_point()
 
-athletes |>
-ggplot(mapping = aes(Wt, BMI)) +
-  geom_point()
-
-# No obvious extreme values or outliers, 
+#From the summary of athletes, there are no apparent extreme values or illogical values, 
+#Looking to see if there is a miscalculation instead.
 
 #Using mutate to create a new column, BMI_check the result of weight/height^2 (BMI formula)(rounded to 2dp) to manually calculate based off Ht and Wt columns,  
 athletes |> 

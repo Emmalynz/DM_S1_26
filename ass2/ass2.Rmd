@@ -1,0 +1,438 @@
+---
+title: "161.324 Data Mining"
+subtitle: "Assignment 2, 2026"
+author: "Emma Bridge"
+output: html_document
+---
+
+```{r setup, echo=TRUE, warning=FALSE, message=FALSE}
+# Add any other packages you need to load here.
+library(tidyverse)
+library(tidymodels)
+library(skimr)
+library(GGally)
+library(rpart)
+library(randomForest)
+library(discrim)
+library(kknn)
+
+# Read in the data
+property.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/161324/assessment/data/property_train_val.csv")
+property.test <- read_csv("https://www.massey.ac.nz/~jcmarsha/161324/assessment/data/property_test.csv")
+wheat.train <- read_csv("https://www.massey.ac.nz/~jcmarsha/161324/assessment/data/wheat_train_val.csv") |>
+  mutate(variety = factor(variety))
+wheat.test <- read_csv("https://www.massey.ac.nz/~jcmarsha/161324/assessment/data/wheat_test.csv")
+```
+
+Replace `YOUR NAME HERE` in the author field before knitting. Save your final HTML report as `report_studentid.html`.
+
+## Exercise 1: Property Value Prediction
+
+Use property_train_val.csv to build one or more prediction models for price_per_unit, then predict price_per_unit for every row in property_test.csv.
+
+property_train_val.csv contains 310 labelled observations. property_test.csv contains 104 unlabelled observations.
+
+```{r, message = FALSE}
+
+set.seed(1414)
+split <- initial_split(property.train, prop= 3/4)
+train <- training(split)
+test  <- testing(split)
+
+skim(train)
+summary(train)
+
+ggplot(train)+
+  aes(x=price_per_unit, fill = price_per_unit > 115) +
+  geom_histogram(bins = 40) +
+  theme_minimal()   
+
+train_no_outlier <- train |> filter(price_per_unit < 100)
+
+cor(train)
+pairs(train)
+pairs(train_no_outlier)
+
+```
+   
+
+
+###Linear Model Prediction
+
+```{r}
+
+#All data
+lm_model1 <- lm(price_per_unit ~ ., data = train)
+summary(lm_model1)
+
+lm_model_pred <- lm_model1 |> 
+  augment(newdata = test, interval = "prediction")
+
+summary(lm_model1)
+
+#excluding price outlier
+lm_model_2 <- lm(price_per_unit ~ ., data = train_no_outlier)
+summary(lm_model_2)
+
+lm_model_2_pred <- lm_model_2 |> 
+  augment(newdata = test, interval = "prediction")
+
+#excluding longitude
+lm_model_3 <- lm(price_per_unit ~ . - longitude, data = train)
+summary(lm_model_3)
+
+lm_model_3_pred <- lm_model_3 |> 
+  augment(newdata = test, interval = "prediction")
+
+#excluding both
+lm_model_4 <- lm(price_per_unit ~ . - longitude, data = train_no_outlier)
+summary(lm_model_4)
+
+lm_model_4_pred <- lm_model_4 |> 
+  augment(newdata = test, interval = "prediction")
+
+#Checking rmse 
+
+lm_model_pred |>  
+  rmse(truth = price_per_unit, estimate = .fitted)
+
+lm_model_2_pred |>  
+  rmse(truth = price_per_unit, estimate = .fitted)
+
+lm_model_3_pred |>  
+  rmse(truth = price_per_unit, estimate = .fitted)
+
+lm_model_4_pred |>  
+  rmse(truth = price_per_unit, estimate = .fitted)
+
+```
+
+### Regression Tree 
+
+```{r}
+set.seed(1414)
+
+model_1.rp <- rpart(price_per_unit ~ ., data = train, cp = 0.001, method = "anova")
+
+printcp(model_1.rp)|> as_tibble() |>
+  mutate(limit = min(xerror + xstd)) |>
+  filter(xerror <= limit)
+
+model_2.rp <- rpart(price_per_unit ~ ., data = train_no_outlier, cp = 0.001, method = "anova")
+
+printcp(model_2.rp)|> as_tibble() |>
+  mutate(limit = min(xerror + xstd)) |>
+  filter(xerror <= limit)
+
+
+model_3.rp <- rpart(price_per_unit ~ .- longitude, data = train, cp = 0.001, method = "anova")
+
+printcp(model_3.rp) |> as_tibble() |>
+  mutate(limit = min(xerror + xstd)) |>
+  filter(xerror <= limit)
+
+
+model_4.rp <- rpart(price_per_unit ~ .- longitude, data = train_no_outlier,  cp = 0.001,method = "anova")
+
+cp_table4 <- printcp(model_4.rp)
+cp_table4 |> as_tibble() |>
+  mutate(limit = min(xerror + xstd)) |>
+  filter(xerror <= limit)
+
+#Prune
+
+model_1.rp <- rpart(price_per_unit ~ ., data = train, cp = 0.006, method = "anova")
+model_2.rp <- rpart(price_per_unit ~ ., data = train_no_outlier, cp = 0.001, method = "anova")
+model_3.rp <- rpart(price_per_unit ~ . - longitude, data = train, cp = 0.008, method = "anova")
+model_4.rp <- rpart(price_per_unit ~ . - longitude, data = train_no_outlier, cp = 0.001, method = "anova")
+
+#prediction
+tree_pred <- test |>
+  mutate(.fitted = predict(model_1.rp, newdata = test))
+
+tree_pred_2 <- test |>
+  mutate(.fitted = predict(model_2.rp, newdata = test))
+
+tree_pred_3 <- test |>
+  mutate(.fitted = predict(model_3.rp, newdata = test))
+
+tree_pred_4 <- test |>
+  mutate(.fitted = predict(model_4.rp, newdata = test))
+
+#RMSE
+tree_pred |> 
+  rmse(truth = price_per_unit, estimate = .fitted)
+
+tree_pred_2 |>
+  rmse(truth = price_per_unit, estimate = .fitted)
+
+tree_pred_3 |>
+  rmse(truth = price_per_unit, estimate = .fitted)
+
+tree_pred_4 |>
+  rmse(truth = price_per_unit, estimate = .fitted)
+```
+
+###Random forest
+
+```{r}
+set.seed(1414)
+
+rf_model_1 <- randomForest(price_per_unit ~ ., data = train)
+rf_model_2 <- randomForest(price_per_unit ~ ., data = train_no_outlier, mtry =2)
+rf_model_3 <- randomForest(price_per_unit ~ . -longitude, data = train, mtry = 2)
+rf_model_4 <- randomForest(price_per_unit ~ . - longitude, data = train_no_outlier, mtry = 2)
+
+#Prediction
+rf_pred_1 <- test |>
+  mutate(.pred = predict(rf_model_1, newdata = test))
+
+rf_pred_2 <- test |>
+  mutate(.pred = predict(rf_model_2, newdata = test))
+
+rf_pred_3 <- test |>
+  mutate(.pred = predict(rf_model_3, newdata = test))
+
+rf_pred_4 <- test |>
+  mutate(.pred = predict(rf_model_4, newdata = test))
+
+#RMSE
+rf_pred_1 |> rmse(truth = price_per_unit, estimate = .pred)
+rf_pred_2 |> rmse(truth = price_per_unit, estimate = .pred)
+rf_pred_3 |> rmse(truth = price_per_unit, estimate = .pred)
+rf_pred_4 |> rmse(truth = price_per_unit, estimate = .pred)
+
+```
+
+
+```{r}
+
+rf_pred_property.test <- property.test |>
+  mutate(.pred = predict(rf_model_3, newdata = property.test))
+
+write_csv(rf_pred_property.test, "ex1_19034939.csv")
+
+```
+
+### 1.1 Property Value Methodology
+
+Following the initial split, train data shows 232 observations and 7 columns. Price_per_unit is the target variable, the histogram distribution is right skewed with a clear outlier ~120. This is visible with the unusually high max value for price_per_unit at 117.5. As other row inputs appear reasonable this outlier may distort/influence predictive models, and affect the accuracy on test sets. 
+
+A correlation matrix suggests Price_per_unit decreases as transit_distance increases (-0.63), price_per_unit increases with latitude (0.54) and the number of nearby stores (0.51).  
+
+Notably there is a strong negative correlation between transit distance and longitude (-0.79), suggesting transit distance decreases sharply as longitude increases. Highly correlated predictor variables can lead to overfitting with too much noise influencing models and its ability to see the individual effects of variables on the target, to mitigate this I will trial excluding the longitude variable (as it has a weaker correlation to price_per_unit).
+
+We can see in the pairs plots, transit_distance curves downwards as price increases, and there is a relatively linear positive relationship with nearby_stores. We also see that latitude and longitude follow a similar pattern with price_per_unit increasing as latitude/longitude increases. 
+
+Noting the outlier, and highly correlated transit distance and longitude. Four data variations (baseline (all data), no outlier, no longitude, and both excluded) will be used in a linear model, regression tree and random forest observing the effects on predictive accuracy using RMSE.
+
+Using RMSE to assess the performance of the linear model, Model 4, with excluded outlier and longitude variable, performed slightly better with the lowest RMSE result.  This model explained 59.99% of variation in price_per_unit, also increased from alternate models, suggesting transit distance, property age and nearby stores as the strongest predictors (significant p-value).
+
+To improve the accuracy of the regression tree models,  suitable complexity parameters were set by comparing the lowest xerror and choosing the cp, then pruning the trees to those parameters. Similarly using RMSE to assess the performance of regression trees, on variations of all data, no outlier, no longitude and both no longitude and no outlier,  tree_pred_4 (no outlier, no longitude) yielded the smallest result.
+
+Similarly for random forest models variations of data (all, no outlier, no longitude, no combined) were compared. An mtry of  2 was used for all variations as p/3. The model with all data (including outlier) performed the best with an RMSE of 8.06 (2dp).
+
+The random forest model performed best on its ability to reduce RMSE, meaning its ability to generalise patterns between predictor variables (balancing overfitting/underfitting) and the target against an unseen/test dataset. A random forest model likely performed better as it is a more flexible model that can handle outliers/non-linear relationships. As such this model will be used to predict the property.test that is missing price_per_unit. 
+
+
+## Exercise 2: Wheat Variety Classification
+
+```{r, message=FALSE}
+
+set.seed(1414)
+split <- initial_split(wheat.train, prop=3/4)
+wheat_train <- training(split)
+wheat_test <- testing(split)
+
+#Exploratory Analysis
+summary(wheat_train)
+
+wheat_train |>
+  ggplot() +
+  aes(x=kernel_area, y = kernel_perimeter, colour = variety) +
+  geom_point()
+
+wheat_train_clean <- wheat_train |> 
+  filter(kernel_area < 100)
+
+#Normalise Recipe
+all_recipe <- recipe(variety ~ ., data = wheat_train) |> 
+  step_normalize(all_numeric_predictors()) |> 
+  prep()
+
+cleaner_recipe <- recipe(variety ~ ., data = wheat_train_clean) |> 
+  step_normalize(all_numeric_predictors()) |> 
+  prep()
+
+wheat_train_all <- bake(all_recipe, new_data = wheat_train)
+wheat_test_all  <- bake(all_recipe, new_data = wheat_test)
+
+wheat_train_cleaner <- bake(cleaner_recipe, new_data = wheat_train_clean)
+wheat_test_cleaner  <- bake(cleaner_recipe, new_data = wheat_test)
+
+
+wheat_train_cleaner |>
+  ggpairs(
+    columns = 1:7, 
+    mapping = aes(colour = variety))
+
+```
+
+## Linear Discriminant Analysis
+
+```{r}
+set.seed(1414)
+
+wheat_all.lda <- discrim_linear() |> 
+  fit(variety ~ ., data = wheat_train_all)
+
+wheat_clean.lda <- discrim_linear() |> 
+  fit(variety ~ ., data = wheat_train_cleaner)
+
+all_reduced_1.lda <- discrim_linear() |> 
+  fit(variety ~ . - kernel_perimeter - kernel_width - kernel_length, 
+      data = wheat_train_all)
+
+clean_reduced_1.lda <- discrim_linear() |> 
+ fit(variety ~ . - kernel_perimeter - kernel_width - kernel_length, 
+      data = wheat_train_cleaner)
+
+
+#prediction
+all.lda.pred <- wheat_all.lda |>
+  augment(new_data = wheat_test_all)
+
+cleaner.lda.pred <- wheat_clean.lda |>
+  augment(new_data = wheat_test_cleaner)
+
+all.reduced.lda.pred <- all_reduced_1.lda |>
+  augment(new_data = wheat_test_all)
+
+cleaner.reduced.lda.pred <- clean_reduced_1.lda |>
+  augment(new_data = wheat_test_cleaner)
+
+
+#Confusion Matrix
+all.lda.pred |>
+  conf_mat(truth = variety, estimate = .pred_class)
+
+cleaner.lda.pred |>
+  conf_mat(truth = variety, estimate = .pred_class)
+
+all.reduced.lda.pred |>
+  conf_mat(truth = variety, estimate = .pred_class)
+
+cleaner.reduced.lda.pred |>
+  conf_mat(truth = variety, estimate = .pred_class)
+
+
+```
+
+## Results
+
+Linear Discriminant Analysis error rate:             all.lda.pred =  10.3%
+Linear Discriminant Analysis error rate:         cleaner.lda.pred =  5.1%
+Linear Discriminant Analysis error rate:     all.reduced.lda.pred =  7.7%
+Linear Discriminant Analysis error rate: cleaner.reduced.lda.pred =  7.7%
+
+
+## K-Nearest Neighbour Classification
+
+```{r}
+set.seed(1414)
+
+all.knn <- nearest_neighbor(mode="classification", neighbors = 20) |>  
+  fit(variety ~ ., data = wheat_train_all)
+
+cleaner.knn <- nearest_neighbor(mode="classification", neighbors = 20) |>
+  fit(variety ~ ., data = wheat_train_cleaner)
+
+all.reduced.knn <- nearest_neighbor(mode = "classification", neighbors = 20) |>
+  fit(variety ~ . - kernel_perimeter - kernel_width - kernel_length,
+      data = wheat_train_all)
+
+cleaner.reduced.knn <- nearest_neighbor(mode = "classification", neighbors = 20) |>
+  fit(variety ~ . - kernel_perimeter - kernel_width - kernel_length, 
+      data = wheat_train_cleaner)
+
+#Prediction
+all.knn.pred <- all.knn |> 
+  augment(new_data = wheat_test_all)
+
+cleaner.knn.pred <- cleaner.knn |> 
+  augment(new_data = wheat_test_cleaner)
+
+all_reduced.knn.pred <- all.reduced.knn |>
+  augment(new_data = wheat_test_all)
+
+cleaner_reduced.knn.pred <- cleaner.reduced.knn |> 
+  augment(new_data = wheat_test_cleaner)
+
+#Confusion Matrix
+all.knn.pred |> 
+  conf_mat(truth=variety, estimate=.pred_class)
+
+cleaner.knn.pred |> 
+  conf_mat(truth=variety, estimate=.pred_class)
+
+all_reduced.knn.pred |>
+  conf_mat(truth=variety, estimate=.pred_class)
+
+cleaner_reduced.knn.pred |> 
+  conf_mat(truth=variety, estimate=.pred_class) 
+```
+
+## Results
+
+K-Nearest Neighbour error rate:     all_wheat.knn.pred =  10.2%
+K-Nearest Neighbour error rate: cleaner_wheat.knn.pred =  10.2% 
+K-Nearest Neighbour error rate:     all_wheat.knn.pred =  12.8%
+K-Nearest Neighbour error rate: cleaner_wheat.knn.pred =  18%
+
+
+```{r}
+#Running best performing model on property test data
+#adding .pred column to property.test and writing to a csv file  
+wheat.test2  <- bake(cleaner_recipe, new_data = wheat.test)
+
+lda_pred_wheat.test <- wheat.test2 |>
+  mutate(.pred = predict(wheat_clean.lda, new_data = wheat.test2)$.pred_class)
+
+write_csv(lda_pred_wheat.test, "ex1_19034939.csv")
+
+```
+
+### 2.1 Wheat Variety Methodology
+
+To predict variety for the wheat_test data, we split training data 75/25 for training prediction models.
+
+Exploring the data we can see Kernel width, length, perimeter and area are all highly correlated with one another. The summary statistics, shows us there are moderate differences in predictor variables scales eg 0.76 - 184.3 and the max statistic for kernel_are and kernel_perimeter appear unusually high. 
+
+This is clear in the scatterplot, there are 2 outliers. To deal with this, wheat_train_clean, will  remove observations greater than 100. Predictive accuracy can then be assessed by trialing different techniques to improve models. 
+
+To help balance the scales between variables, and reduce larger values from disproportionately dominating, a recipe is used to normalise each alternate version of data, (ie, transforming so the variables share similar mean/sd).
+
+1: all data
+2: clean data (no outliers)
+
+The relationship between variables is clearer in the clean data pairs plot, coloured by wheat variety. There are generally distinctive differences in location, group means and spread of each variety. Kernel area, perimeter, length, and width show strong positive linear relationships.
+
+Kernel asymmetry and compaction however show more overlap between varieties location and group means, with spread appearing more elliptical. With this an  LDA may perform well on this data, although the strong correlations between variables could influence models stability. 
+
+As kernel area and kernel perimeter have the highest correlation (0.994). I will trial removing perimeter and area, alongside kernel_width and length, as both share high correlation with kernel_area (0.970 and 0.943) and width * length = area so the two columns are likely sharing similar information to area. To reduce this multicollinearity, the normalised train/test data will be used with excluded perimeter, width and length variables. 
+
+3: kernel_area, kernel_compactness and groove length (both all and clean data)
+
+As the relationship between predictors is not exclusively linear, KNN classification model will also be used alongside the LDA to compare accuracy. KNN is more flexible and resistant to non-linear differences in varieties, than LDA, however is sensitive to scaling. A larger than default, k= 20 value will be used to reduce the models sensitivity to noise, this may increase the models bias, but may reduce variance as a result. I expect KNN to perform better on all data or clean data, compared to the reduced predictors models due to its flexibility. 
+
+The performance of the LDA model using excluded outliers, on all predictor variables performed the best with an error rate of 5.2%. Comparatively the best performing KNN model was equally the model using all and cleaned data with no excluded to predictors both with an error rate of 10.2%. This shows us that even with correlated predictors, the models using all information from all predictors outperformed those with altered predictors.
+
+### 2.2 Wheat Variety Explainability
+
+Using the cleaned training data in LDA, we can see LDA1 explains 75.9% of variance in variety types, with the most significant predictors as Kernal length (-4.02), Kernel Area (3.96), kernel_perimeter (2.49) and groove length (2.07). It appears wheat varieties are best differentiated by combined size measurements, we can see in earlier pairs plot, these predictors have clear distinct seperation between varieties, ie for kernel area, Canadian varieties peak at small values, Kama peaks at mid values, and Rosa at higher values, the means for each variety groups are distinct.
+
+```{r, message=FALSE}
+
+print(wheat_clean.lda)
+
+```

@@ -102,6 +102,8 @@ lm_model_4_pred |>
 
 ```
 
+
+
 ### Regression Tree 
 
 ```{r}
@@ -224,11 +226,12 @@ We can see in the pairs plots, transit_distance curves downwards as price increa
 
 Noting the outlier, and highly correlated transit distance and longitude. Four data variations (baseline (all data), no outlier, no longitude, and both excluded) will be used in a linear model, regression tree and random forest observing the effects on predictive accuracy using RMSE.
 
-Using RMSE to assess the performance of the linear model, Model 4, with excluded outlier and longitude variable, performed slightly better with the lowest RMSE result.  This model explained 59.99% of variation in price_per_unit, also increased from alternate models, suggesting transit distance, property age and nearby stores as the strongest predictors (significant p-value).
+Using RMSE to assess the performance of the linear model, Model 4, with excluded outlier and longitude variable, performed slightly better with the lowest RMSE result (9.48).  This model explained 52% of variation in price_per_unit (increased from alternate models) suggesting transit distance, property age and nearby stores as the strongest predictors (significant p-value).
 
-To improve the accuracy of the regression tree models,  suitable complexity parameters were set by comparing the lowest xerror and choosing the cp, then pruning the trees to those parameters. Similarly using RMSE to assess the performance of regression trees, on variations of all data, no outlier, no longitude and both no longitude and no outlier,  tree_pred_4 (no outlier, no longitude) yielded the smallest result.
+To improve the accuracy of the regression tree models more suitable complexity parameters (cp) were set by comparing the lowest xerror, its correlating cp is used to prune the trees. 
+Using RMSE to assess the performance of regression trees, on variations of all data, no outlier, no longitude and both no longitude and no outlier,  tree_pred_4 (no outlier, no longitude) yielded the smallest result (8.59).
 
-Similarly for random forest models variations of data (all, no outlier, no longitude, no combined) were compared. An mtry of 2 was used for all variations as p/3. The model with all data (including outlier) performed the best with an RMSE of 8.06 (2dp).
+Similarly random forest models were generated on variations of data (all, no outlier, no longitude, no combined) were compared. An mtry of 2 was used for all variations as p/3. The model with all data (including outlier) performed the best with an RMSE of 8.06 (2dp).
 
 The random forest model performed best on its ability to reduce RMSE, meaning its ability to generalise patterns between predictor variables (balancing overfitting/underfitting) and the target against an unseen/test dataset. A random forest model likely performed better as it is a more flexible model that can handle outliers/non-linear relationships. As such this model will be used to predict the property.test that is missing price_per_unit. 
 

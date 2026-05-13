@@ -35,7 +35,7 @@ property_train_val.csv contains 310 labelled observations. property_test.csv con
 ```{r, message = FALSE}
 
 set.seed(1414)
-split <- initial_split(property.train, prop= 3/4)
+split <- initial_split(property.train, prop = 3/4)
 train <- training(split)
 test  <- testing(split)
 
@@ -127,7 +127,7 @@ printcp(model_3.rp) |> as_tibble() |>
   filter(xerror <= limit)
 
 
-model_4.rp <- rpart(price_per_unit ~ .- longitude, data = train_no_outlier,  cp = 0.001,method = "anova")
+model_4.rp <- rpart(price_per_unit ~ .- longitude, data = train_no_outlier, cp = 0.001, method = "anova")
 
 printcp(model_4.rp) |> as_tibble() |>
   mutate(limit = min(xerror + xstd)) |>
@@ -175,7 +175,7 @@ tree_pred_4 |>
 set.seed(1414)
 
 rf_model_1 <- randomForest(price_per_unit ~ ., data = train)
-rf_model_2 <- randomForest(price_per_unit ~ ., data = train_no_outlier, mtry =2)
+rf_model_2 <- randomForest(price_per_unit ~ ., data = train_no_outlier, mtry = 2)
 rf_model_3 <- randomForest(price_per_unit ~ . -longitude, data = train, mtry = 2)
 rf_model_4 <- randomForest(price_per_unit ~ . - longitude, data = train_no_outlier, mtry = 2)
 
@@ -238,7 +238,7 @@ The random forest model performed best on its ability to reduce RMSE, meaning it
 ```{r, message=FALSE}
 
 set.seed(1414)
-split <- initial_split(wheat.train, prop=3/4)
+split <- initial_split(wheat.train, prop = 3/4)
 wheat_train <- training(split)
 wheat_test <- testing(split)
 
@@ -247,7 +247,7 @@ summary(wheat_train)
 
 wheat_train |>
   ggplot() +
-  aes(x=kernel_area, y = kernel_perimeter, colour = variety) +
+  aes(x = kernel_area, y = kernel_perimeter, colour = variety) +
   geom_point()
 
 wheat_train_clean <- wheat_train |> 
@@ -329,9 +329,9 @@ cleaner.reduced.lda.pred |>
 ## Results
 
 Linear Discriminant Analysis error rate:             all.lda.pred =  10.3%
-Linear Discriminant Analysis error rate:         cleaner.lda.pred =  5.1%
-Linear Discriminant Analysis error rate:     all.reduced.lda.pred =  7.7%
-Linear Discriminant Analysis error rate: cleaner.reduced.lda.pred =  7.7%
+Linear Discriminant Analysis error rate:         cleaner.lda.pred =   5.1%
+Linear Discriminant Analysis error rate:     all.reduced.lda.pred =   7.7%
+Linear Discriminant Analysis error rate: cleaner.reduced.lda.pred =   7.7%
 
 
 ## K-Nearest Neighbour Classification
@@ -368,16 +368,16 @@ cleaner_reduced.knn.pred <- cleaner.reduced.knn |>
 
 #Confusion Matrix
 all.knn.pred |> 
-  conf_mat(truth=variety, estimate=.pred_class)
+  conf_mat(truth = variety, estimate = .pred_class)
 
 cleaner.knn.pred |> 
-  conf_mat(truth=variety, estimate=.pred_class)
+  conf_mat(truth = variety, estimate = .pred_class)
 
 all_reduced.knn.pred |>
-  conf_mat(truth=variety, estimate=.pred_class)
+  conf_mat(truth = variety, estimate = .pred_class)
 
 cleaner_reduced.knn.pred |> 
-  conf_mat(truth=variety, estimate=.pred_class) 
+  conf_mat(truth = variety, estimate = .pred_class) 
 ```
 
 ## Results

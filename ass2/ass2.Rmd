@@ -228,7 +228,7 @@ Using RMSE to assess the performance of the linear model, Model 4, with excluded
 
 To improve the accuracy of the regression tree models,  suitable complexity parameters were set by comparing the lowest xerror and choosing the cp, then pruning the trees to those parameters. Similarly using RMSE to assess the performance of regression trees, on variations of all data, no outlier, no longitude and both no longitude and no outlier,  tree_pred_4 (no outlier, no longitude) yielded the smallest result.
 
-Similarly for random forest models variations of data (all, no outlier, no longitude, no combined) were compared. An mtry of  2 was used for all variations as p/3. The model with all data (including outlier) performed the best with an RMSE of 8.06 (2dp).
+Similarly for random forest models variations of data (all, no outlier, no longitude, no combined) were compared. An mtry of 2 was used for all variations as p/3. The model with all data (including outlier) performed the best with an RMSE of 8.06 (2dp).
 
 The random forest model performed best on its ability to reduce RMSE, meaning its ability to generalise patterns between predictor variables (balancing overfitting/underfitting) and the target against an unseen/test dataset. A random forest model likely performed better as it is a more flexible model that can handle outliers/non-linear relationships. As such this model will be used to predict the property.test that is missing price_per_unit. 
 
@@ -406,7 +406,7 @@ To predict variety for the wheat_test data, we split training data 75/25 for tra
 
 Exploring the data we can see Kernel width, length, perimeter and area are all highly correlated with one another. The summary statistics, shows us there are moderate differences in predictor variables scales eg 0.76 - 184.3 and the max statistic for kernel_are and kernel_perimeter appear unusually high. 
 
-This is clear in the scatterplot, there are 2 outliers. To deal with this, wheat_train_clean, will  remove observations greater than 100. Predictive accuracy can then be assessed by trialing different techniques to improve models. 
+This is clear in the scatterplot, there are 2 outliers. To deal with this, wheat_train_clean will remove observations greater than 100. Predictive accuracy can then be assessed by trialing different techniques to improve models. 
 
 To help balance the scales between variables, and reduce larger values from disproportionately dominating, a recipe is used to normalise each alternate version of data, (ie, transforming so the variables share similar mean/sd).
 
@@ -415,9 +415,9 @@ To help balance the scales between variables, and reduce larger values from disp
 
 The relationship between variables is clearer in the clean data pairs plot, coloured by wheat variety. There are generally distinctive differences in location, group means and spread of each variety. Kernel area, perimeter, length, and width show strong positive linear relationships.
 
-Kernel asymmetry and compaction however show more overlap between varieties location and group means, with spread appearing more elliptical. With this an  LDA may perform well on this data, although the strong correlations between variables could influence models stability. 
+Kernel asymmetry and compaction however show more overlap between varieties location and group means, with spread appearing more elliptical. With this an LDA may perform well on this data, although the strong correlations between variables could influence models stability. 
 
-As kernel area and kernel perimeter have the highest correlation (0.994). I will trial removing perimeter and area, alongside kernel_width and length, as both share high correlation with kernel_area (0.970 and 0.943) and width * length = area so the two columns are likely sharing similar information to area. To reduce this multicollinearity, the normalised train/test data will be used with excluded perimeter, width and length variables. 
+As kernel area and kernel perimeter have the highest correlation (0.994). I will trial removing perimeter and area, alongside kernel_width and length, as both share high correlation with kernel_area (0.970 and 0.943) and width * length = area so the two columns are likely sharing similar information to area. To reduce this multicollinearity, the normalised train/test data will be used with excluded perimeter, width and length variables.
 
 3: kernel_area, kernel_compactness and groove length (both all and clean data)
 

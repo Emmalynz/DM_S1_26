@@ -45,6 +45,8 @@ summary(train)
 ggplot(train)+
   aes(x=price_per_unit, fill = price_per_unit > 115) +
   geom_histogram(bins = 40) +
+  labs(title = "Distribution of Price per unit",
+       xlab = "Price per unit") +
   theme_minimal()   
 
 train_no_outlier <- train |> filter(price_per_unit < 100)
@@ -61,7 +63,6 @@ pairs(train_no_outlier)
 
 ```{r}
 
-#All data
 lm_model1 <- lm(price_per_unit ~ ., data = train)
 summary(lm_model1)
 
@@ -70,24 +71,18 @@ lm_model_pred <- lm_model1 |>
 
 summary(lm_model1)
 
-#excluding price outlier
-lm_model_2 <- lm(price_per_unit ~ ., data = train_no_outlier)
-summary(lm_model_2)
 
+lm_model_2 <- lm(price_per_unit ~ ., data = train_no_outlier)
 lm_model_2_pred <- lm_model_2 |> 
   augment(newdata = test, interval = "prediction")
 
-#excluding longitude
-lm_model_3 <- lm(price_per_unit ~ . - longitude, data = train)
-summary(lm_model_3)
 
+lm_model_3 <- lm(price_per_unit ~ . - longitude, data = train)
 lm_model_3_pred <- lm_model_3 |> 
   augment(newdata = test, interval = "prediction")
 
-#excluding both
-lm_model_4 <- lm(price_per_unit ~ . - longitude, data = train_no_outlier)
-summary(lm_model_4)
 
+lm_model_4 <- lm(price_per_unit ~ . - longitude, data = train_no_outlier)
 lm_model_4_pred <- lm_model_4 |> 
   augment(newdata = test, interval = "prediction")
 
@@ -134,8 +129,7 @@ printcp(model_3.rp) |> as_tibble() |>
 
 model_4.rp <- rpart(price_per_unit ~ .- longitude, data = train_no_outlier,  cp = 0.001,method = "anova")
 
-cp_table4 <- printcp(model_4.rp)
-cp_table4 |> as_tibble() |>
+printcp(model_4.rp) |> as_tibble() |>
   mutate(limit = min(xerror + xstd)) |>
   filter(xerror <= limit)
 
@@ -147,6 +141,7 @@ model_3.rp <- rpart(price_per_unit ~ . - longitude, data = train, cp = 0.008, me
 model_4.rp <- rpart(price_per_unit ~ . - longitude, data = train_no_outlier, cp = 0.001, method = "anova")
 
 #prediction
+
 tree_pred <- test |>
   mutate(.fitted = predict(model_1.rp, newdata = test))
 
@@ -160,6 +155,7 @@ tree_pred_4 <- test |>
   mutate(.fitted = predict(model_4.rp, newdata = test))
 
 #RMSE
+
 tree_pred |> 
   rmse(truth = price_per_unit, estimate = .fitted)
 
@@ -184,6 +180,7 @@ rf_model_3 <- randomForest(price_per_unit ~ . -longitude, data = train, mtry = 2
 rf_model_4 <- randomForest(price_per_unit ~ . - longitude, data = train_no_outlier, mtry = 2)
 
 #Prediction
+
 rf_pred_1 <- test |>
   mutate(.pred = predict(rf_model_1, newdata = test))
 
@@ -197,6 +194,7 @@ rf_pred_4 <- test |>
   mutate(.pred = predict(rf_model_4, newdata = test))
 
 #RMSE
+
 rf_pred_1 |> rmse(truth = price_per_unit, estimate = .pred)
 rf_pred_2 |> rmse(truth = price_per_unit, estimate = .pred)
 rf_pred_3 |> rmse(truth = price_per_unit, estimate = .pred)
@@ -216,7 +214,7 @@ write_csv(rf_pred_property.test, "ex1_19034939.csv")
 
 ### 1.1 Property Value Methodology
 
-Following the initial split, train data shows 232 observations and 7 columns. Price_per_unit is the target variable, the histogram distribution is right skewed with a clear outlier ~120. This is visible with the unusually high max value for price_per_unit at 117.5. As other row inputs appear reasonable this outlier may distort/influence predictive models, and affect the accuracy on test sets. 
+Following the initial split, train data shows 232 observations and 7 columns. Price_per_unit is the target variable, the histogram distribution is right skewed with a clear outlier ~120. This is visible with the unusually high max value for price_per_unit at 117.5. Other row inputs appear reasonable, however this outlier may distort/influence predictive models, and affect the accuracy on test sets. 
 
 A correlation matrix suggests Price_per_unit decreases as transit_distance increases (-0.63), price_per_unit increases with latitude (0.54) and the number of nearby stores (0.51).  
 
@@ -235,7 +233,7 @@ Similarly for random forest models variations of data (all, no outlier, no longi
 The random forest model performed best on its ability to reduce RMSE, meaning its ability to generalise patterns between predictor variables (balancing overfitting/underfitting) and the target against an unseen/test dataset. A random forest model likely performed better as it is a more flexible model that can handle outliers/non-linear relationships. As such this model will be used to predict the property.test that is missing price_per_unit. 
 
 
-## Exercise 2: Wheat Variety Classification
+## Exercise 2: Wheat Variety Classification 
 
 ```{r, message=FALSE}
 
